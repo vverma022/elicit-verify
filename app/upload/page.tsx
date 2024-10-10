@@ -105,7 +105,14 @@ export default function CSVUploadCard() {
   }
 
   return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden relative bg-black">
     <div className='flex items-center justify-center min-h-screen px-4'>
+      <div className="absolute inset-0 w-full h-full">
+      <div className="absolute inset-0 w-full h-full animate-pulse-enhanced"> {/* Updated animation class */}
+        <div className="absolute inset-0 bg-gradient-radial from-red-600/20 to-transparent rounded-full transform translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute inset-0 bg-gradient-radial from-red-600/20 to-transparent rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+      </div>
+    </div>
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Upload Data</CardTitle>
@@ -167,6 +174,7 @@ export default function CSVUploadCard() {
           </Button>
         </CardContent>
       </Card>
+    </div>
     </div>
   )
 }
