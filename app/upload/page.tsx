@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, Upload, FileText, CheckCircle2 } from "lucide-react"
 import axios from 'axios'
+import * as XLSX from 'xlsx'
 
 interface CsvJson {
   [key: string]: string
@@ -57,62 +58,92 @@ export default function CSVUploadCard() {
 
   const handleUpload = async () => {
     if (!file) {
-      setError('Please select a CSV file to upload.')
-      return
+      setError('Please select a CSV or Excel file to upload.');
+      return;
     }
-
-    setUploadStatus('uploading')
-    setError('')
-
+  
+    setUploadStatus('uploading');
+    setError('');
+  
     try {
-      // Read the file
-      const csvText = await file.text()
-
-      // Convert CSV to JSON manually
-      const csvToJson = (csv: string): CsvJson[] => {
-        const lines = csv.split('\n')
-        const headers = lines[0].split(',').map(header => header.trim())
-        const jsonData: CsvJson[] = lines.slice(1).map(line => {
-          const values = line.split(',').map(value => value.trim())
-          const obj: CsvJson = {}
-          headers.forEach((header, index) => {
-            obj[header] = values[index]
-          })
-          return obj
-        })
-        return jsonData
+      let jsonResult: CsvJson[] = [];
+  
+      if (file.name.endsWith('.csv')) {
+        // Read the CSV file
+        const csvText = await file.text();
+  
+        // Convert CSV to JSON
+        const csvToJson = (csv: string): CsvJson[] => {
+          const lines = csv.split('\n');
+          const headers = lines[0].split(',').map(header => header.trim());
+          const jsonData: CsvJson[] = lines.slice(1).map(line => {
+            const values = line.split(',').map(value => value.trim());
+            const obj: CsvJson = {};
+            headers.forEach((header, index) => {
+              obj[header] = values[index] || ''; // Handle missing values
+            });
+            return obj;
+          });
+          return jsonData;
+        };
+  
+        jsonResult = csvToJson(csvText);
+      } else if (file.name.endsWith('.xlsx')) {
+        // Read the Excel file
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  
+        // Assuming the data is in the first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+  
+        // Convert Excel to JSON
+        jsonResult = XLSX.utils.sheet_to_json(worksheet, { header: 1 }).map(row => {
+          const obj: CsvJson = {};
+          row.forEach((cell, index) => {
+            obj[`Column ${index + 1}`] = cell || ''; // Use dynamic keys for Excel columns
+          });
+          return obj;
+        });
+      } else {
+        setError('Unsupported file format. Please upload a CSV or Excel file.');
+        setUploadStatus('idle');
+        return;
       }
-
-      const jsonResult = csvToJson(csvText)
-
+  
+      // console.log('Converted file to JSON:', jsonResult);
+  
+      // Filter to include only required fields
+      const filteredResult = jsonResult.map(item => ({
+        'Team Name': item['Team Name'] || '',
+        'Candidate Name': item["Candidate's Name"] || '',
+        'Candidate Email': item["Candidate's Email"] || ''
+      }));
+  
+      console.log('Filtered JSON data:', filteredResult);
+  
       // Simulating progress
       for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i)
-        await new Promise(resolve => setTimeout(resolve, 200))
+        setUploadProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-
-      // Send JSON data to backend using Axios
-      const response = await axios.post('/upload/api/process-data', { data: jsonResult })
-
+  
+      // Send filtered JSON data to backend using Axios
+      const response = await axios.post('/upload/api/process-data', { data: filteredResult });
+  
       if (response.status === 200) {
-        setUploadStatus('success')
-        console.log('File uploaded successfully:', file.name)
+        setUploadStatus('success');
+        console.log('File uploaded successfully:', file.name);
       }
     } catch (error) {
-      setError('An error occurred during upload. Please try again.')
-      setUploadStatus('idle')
+      console.error('Error during file upload:', error);
+      setError('An error occurred during upload. Please try again.');
+      setUploadStatus('idle');
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden relative bg-black">
-    <div className='flex items-center justify-center min-h-screen px-4'>
-      <div className="absolute inset-0 w-full h-full">
-      <div className="absolute inset-0 w-full h-full animate-pulse-enhanced"> {/* Updated animation class */}
-        <div className="absolute inset-0 bg-gradient-radial from-red-600/20 to-transparent rounded-full transform translate-x-1/2 translate-y-1/2"></div>
-        <div className="absolute inset-0 bg-gradient-radial from-red-600/20 to-transparent rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
-      </div>
-    </div>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden relative">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Upload Data</CardTitle>
@@ -131,13 +162,12 @@ export default function CSVUploadCard() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
               onChange={(e) => handleFileSelection(e.target.files?.[0] || null)}
               className="hidden"
             />
             <FileText className="mx-auto h-12 w-12 text-gray-400" />
             <p className="mt-2 text-sm text-gray-600">
-              Drag and drop your CSV file here, or click to select
+              Drag and drop your CSV or Excel file here, or click to select
             </p>
           </div>
           {error && (
@@ -174,7 +204,6 @@ export default function CSVUploadCard() {
           </Button>
         </CardContent>
       </Card>
-    </div>
     </div>
   )
 }

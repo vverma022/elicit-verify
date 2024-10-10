@@ -21,3 +21,10 @@ model Admin {
   committee String
   password String
 }
+
+model Candidate {
+  id            Int      @id @default(autoincrement())
+  teamName      String
+  candidateName String
+  candidateEmail String 
+}

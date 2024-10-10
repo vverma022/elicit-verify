@@ -3,7 +3,7 @@
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import React from "react";
 import styled from "styled-components";
-import AirJordanImg from "../assets/elicit .jpg";
+import AirJordanImg from "../assets/elicit .png";
 import { Details } from "../utils/details";
 
 const CardWrapper = styled.div`

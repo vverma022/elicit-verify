@@ -2,7 +2,7 @@
 
 import styled from "styled-components";
 import { Marginer } from "./marginer";
-import NikeImg from "../assets/elicit .jpg";
+import NikeImg from "../assets/elicit .png";
 
 const DetailsContainer = styled.div`
   width: 100%;
