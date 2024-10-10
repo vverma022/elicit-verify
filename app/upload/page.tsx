@@ -6,6 +6,11 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, Upload, FileText, CheckCircle2 } from "lucide-react"
+import axios from 'axios'
+
+interface CsvJson {
+  [key: string]: string
+}
 
 export default function CSVUploadCard() {
   const [file, setFile] = useState<File | null>(null)
@@ -59,14 +64,40 @@ export default function CSVUploadCard() {
     setUploadStatus('uploading')
     setError('')
 
-    // Simulating an upload process
     try {
+      // Read the file
+      const csvText = await file.text()
+
+      // Convert CSV to JSON manually
+      const csvToJson = (csv: string): CsvJson[] => {
+        const lines = csv.split('\n')
+        const headers = lines[0].split(',').map(header => header.trim())
+        const jsonData: CsvJson[] = lines.slice(1).map(line => {
+          const values = line.split(',').map(value => value.trim())
+          const obj: CsvJson = {}
+          headers.forEach((header, index) => {
+            obj[header] = values[index]
+          })
+          return obj
+        })
+        return jsonData
+      }
+
+      const jsonResult = csvToJson(csvText)
+
+      // Simulating progress
       for (let i = 0; i <= 100; i += 10) {
         setUploadProgress(i)
         await new Promise(resolve => setTimeout(resolve, 200))
       }
-      setUploadStatus('success')
-      console.log('File uploaded:', file.name)
+
+      // Send JSON data to backend using Axios
+      const response = await axios.post('/upload/api/process-data', { data: jsonResult })
+
+      if (response.status === 200) {
+        setUploadStatus('success')
+        console.log('File uploaded successfully:', file.name)
+      }
     } catch (error) {
       setError('An error occurred during upload. Please try again.')
       setUploadStatus('idle')
